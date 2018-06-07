@@ -1,6 +1,15 @@
 import numpy as np
 
 
+def calculate_difference_error(true_differences, calculated_differences):
+    differences = calculated_differences - true_differences
+    differences_to_sum = np.triu(np.matrix(differences))
+    squared_diferences = []
+    for i in range(len(differences_to_sum)):
+        squared_diferences.append((differences_to_sum[i] @ differences_to_sum[i].T) ** (1/2))
+    return np.matrix.sum(np.matrix(squared_diferences))
+
+
 def calculate_distance_to_all_points_by_point_index(i, matrix):
     return calculate_distance_to_all_points(matrix[i], matrix)
 
@@ -38,9 +47,12 @@ def main():
     print(calculate_distance(2 * point_a, point_b))
     print(calculate_distance(10 * point_a, point_b))
     print(calculate_distance(3 * point_a, point_b))
-    arr = np.array([point_a, point_b, 2 * point_a, 10 * point_a, 3 * point_a])
+    arr = np.array([point_a, point_b, 2 * point_a])
     print(calculate_distance_to_all_points(point_b, arr))
     print(calculate_distance_to_all_points_by_point_index(1, arr))
+
+    print(calculate_difference_error(arr, arr))
+    print(calculate_difference_error(arr, 4 * arr))
 
 
 if __name__ == '__main__':
