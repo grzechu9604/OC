@@ -1,6 +1,7 @@
 import numpy as np
 import math as mt
 import random as rd
+import matplotlib.pyplot as plt
 
 
 def calculate_distance_error(true_differences, calculated_differences):
@@ -50,7 +51,7 @@ def get_learning_rate(iteration: int):
 
 
 def is_last_iteration(previous_result: float, current_result: float, epsilon: float):
-    return 1 - (current_result / previous_result) < epsilon
+    return abs(1 - (current_result / previous_result)) < epsilon
 
 
 def calculate_next_points_vector(current_points: np.array, gradient: np.array, learning_rate: float):
@@ -115,6 +116,7 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
         next_points = calculate_next_points_vector(current_points, gradient, learning_rate)
         current_error_matrix = calculate_distance_matrix(next_points)
         current_error_value = calculate_distance_error(true_distances, current_error_matrix)
+        current_points = next_points
 
         if current_error_value < previous_error_value:
             best_error = current_error_value
@@ -125,9 +127,10 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
 
         if is_last_iteration(previous_error_value, current_error_value, epsilon) \
                 or steps_without_improvement > max_steps_without_improvement:
+            print("Błąd wynosi: " + str(current_error_value) + " abort")
             break
         else:
-            print("Błąd wynosi: " + current_error_value + " wykonuję kolejną iterację")
+            print("Błąd wynosi: " + str(current_error_value) + " wykonuję kolejną iterację")
 
     return [best_error, best_points]
 
@@ -135,10 +138,29 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
 def main():
     elements_separator = ' '
     lines_separator = ';'
-    matrix = read_distance_matrix_from_file("Resources/triangle", elements_separator, lines_separator)
-    start_points = get_random_start_points(matrix.shape[0], 0, 0, 5, 5)
+    matrix = read_distance_matrix_from_file("Resources/line", elements_separator, lines_separator)
 
-    print(do_optimization(start_points, matrix, 2, 1, 8))
+    best_error = 1000000000
+    best_points = []
+    best_i = 0
+
+    for j in range(100):
+        start_points = get_random_start_points(matrix.shape[0], 0, 0, 10, 5)
+        for i in range(200035504, 200035505):
+            print("Start: " + str(i))
+            tuple = do_optimization(start_points, matrix, i, 0.0000001, 5)
+            if tuple[0] < best_error:
+                best_error = tuple[0]
+                best_points = tuple[1]
+                best_i = i
+
+    print(best_error)
+    print(best_points)
+    print(best_i)
+
+    plt.plot(best_points.T[0], best_points.T[1], 'ro')
+    plt.show()
+
 
 
 
