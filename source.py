@@ -25,9 +25,16 @@ def calculate_distance_to_all_points(point, matrix):
 
 
 def calculate_distance(point_a, point_b):
-    diff_vector = np.absolute(point_a - point_b)
-    distance = (diff_vector @ diff_vector.T) ** (1/2)
-    return distance
+    return calculate_squared_distance(point_a, point_b) ** (1/2)
+
+
+def calculate_squared_distance(point_a, point_b):
+    diff_vector = calculate_distance_vector(point_a, point_b)
+    return diff_vector @ diff_vector.T
+
+
+def calculate_distance_vector(point_a, point_b):
+    return np.absolute(point_a - point_b)
 
 
 def read_distance_matrix_from_file(path, elements_separator, lines_separator):
@@ -57,9 +64,27 @@ def calculate_distance_matrix(points: np.array):
     return np.array(distance_matrix)
 
 
-def calculate_gradient(current_points: np.array):
-    # TODO implementacja gradientu
-    return current_points
+def calculate_gradient_element(true_distances: np.array, points: np.array, i: int, points_amount: int, k: int):
+    element = 0
+
+    for j in range(i + 1, points_amount):
+        distance = calculate_distance(points[i], points[j])
+        squared_distance = calculate_squared_distance(points[i], points[j])
+        sum_of_distance_vector = np.sum(calculate_distance_vector(points[i], points[j]))
+
+        element += 2 * (distance - true_distances[i, j]) * squared_distance * sum_of_distance_vector
+
+    return element
+
+
+def calculate_gradient(points: np.array, true_distances: np.array):
+    gradient = np.zeros(points.shape)
+
+    for i in range(gradient.shape[0]):
+        for k in range(gradient.shape[1]):
+            gradient[i, k] = calculate_gradient_element(true_distances, points, i, gradient.shape[0], k)
+
+    return gradient
 
 
 def get_random_start_points(amount_of_points: int,
@@ -71,7 +96,7 @@ def get_random_start_points(amount_of_points: int,
     return np.array(points)
 
 
-def do_optimization(start_points: np.array, true_distances: np.append, iteration: int, epsilon: float,
+def do_optimization(start_points: np.array, true_distances: np.array, iteration: int, epsilon: float,
                     max_steps_without_improvement: int):
 
     learning_rate = get_learning_rate(iteration)
@@ -86,7 +111,7 @@ def do_optimization(start_points: np.array, true_distances: np.append, iteration
 
     while True:
         previous_error_value = current_error_value
-        gradient = calculate_gradient(current_points)
+        gradient = calculate_gradient(current_points, true_distances)
         next_points = calculate_next_points_vector(current_points, gradient, learning_rate)
         current_error_matrix = calculate_distance_matrix(next_points)
         current_error_value = calculate_distance_error(true_distances, current_error_matrix)
@@ -111,33 +136,10 @@ def main():
     elements_separator = ' '
     lines_separator = ';'
     matrix = read_distance_matrix_from_file("Resources/triangle", elements_separator, lines_separator)
-    point_a = np.array([1, 1, 1])
-    point_b = np.array([0, 0, 0])
-    print(calculate_distance(point_a, point_b))
-    print(calculate_distance(point_b, point_a))
-    print(calculate_distance(2 * point_a, point_b))
-    print(calculate_distance(10 * point_a, point_b))
-    print(calculate_distance(3 * point_a, point_b))
-    arr = np.array([point_a, point_b, 2 * point_a, 5 * point_a, 6 * point_a, 7 * point_a])
+    start_points = get_random_start_points(matrix.shape[0], 0, 0, 5, 5)
 
-    print("TU:")
-    print(calculate_distance_to_all_points_by_point_index(0, arr))
-    print(calculate_distance_to_all_points_by_point_index(1, arr))
-    print(calculate_distance_to_all_points_by_point_index(2, arr))
-    print(calculate_distance_to_all_points_by_point_index(3, arr))
-    print(calculate_distance_to_all_points_by_point_index(4, arr))
-    print(calculate_distance_to_all_points_by_point_index(5, arr))
-    print("TU:")
-    print(calculate_distance_matrix(arr))
+    print(do_optimization(start_points, matrix, 2, 1, 8))
 
-    print(calculate_distance_error(arr, arr))
-    print(calculate_distance_error(arr, 4 * arr))
-
-    print(calculate_next_points_vector(matrix, matrix, 1))
-    print(calculate_next_points_vector(matrix, matrix, 0.5))
-    print(calculate_next_points_vector(matrix, matrix, 0.1))
-
-    print(get_random_start_points(5, 1, 1, 8, 8))
 
 
 if __name__ == '__main__':
