@@ -135,10 +135,10 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
     return [best_error, best_points]
 
 
-def main():
+def optimize_distance(file_name):
     elements_separator = ' '
     lines_separator = ';'
-    matrix = read_distance_matrix_from_file("Resources/line", elements_separator, lines_separator)
+    matrix = read_distance_matrix_from_file(file_name, elements_separator, lines_separator)
 
     best_error = 1000000000
     best_points = []
@@ -146,7 +146,7 @@ def main():
 
     for j in range(100):
         start_points = get_random_start_points(matrix.shape[0], 0, 0, 10, 5)
-        for i in range(200035504, 200035505):
+        for i in range(200035504, 200035506):
             print("Start: " + str(i))
             tuple = do_optimization(start_points, matrix, i, 0.0000001, 5)
             if tuple[0] < best_error:
@@ -162,6 +162,10 @@ def main():
     plt.show()
 
 
+def main():
+    optimize_distance("Resources/triangle")
+    optimize_distance("Resources/line")
+    optimize_distance("Resources/cities")
 
 
 if __name__ == '__main__':
