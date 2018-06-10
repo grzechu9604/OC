@@ -105,7 +105,8 @@ def get_random_start_points(amount_of_points: int,
 
 
 def do_optimization(start_points: np.array, true_distances: np.array, iteration: int, epsilon: float,
-                    max_steps_without_improvement: int, optimize_alpha: bool, use_numeric_gradient: bool):
+                    max_steps_without_improvement: int, optimize_alpha: bool, use_numeric_gradient: bool,
+                    alfa_learning_rate):
 
     learning_rate = get_learning_rate(iteration)
 
@@ -120,13 +121,12 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
     while True:
         previous_error_value = current_error_value
         if use_numeric_gradient:
-            gradient = calculate_gradient_numeric(current_points, 0.000000000001, true_distances,
-                                                          current_error_value)
+            gradient = calculate_gradient_numeric(current_points, 0.0001, true_distances, current_error_value)
         else:
             gradient = calculate_gradient(current_points, true_distances)
 
         if optimize_alpha:
-            learning_rate = get_optimal_alfa(gradient, current_points, true_distances, epsilon, 0.000001, 3)
+            learning_rate = get_optimal_alfa(gradient, current_points, true_distances, epsilon, alfa_learning_rate, 3)
 
         next_points = calculate_next_points_vector(current_points, gradient, learning_rate)
         current_distance_matrix = calculate_distance_matrix(next_points)
@@ -167,7 +167,7 @@ def optimize_with_constant_alfa(start_iteration, end_iteration, step, title, use
         start_points = get_random_start_points(matrix.shape[0], 0, 0, matrix.max(), matrix.max())
         for i in range(start_iteration, end_iteration, step):
             print("Start: " + str(i))
-            tuple = do_optimization(start_points, matrix, i, 0.0000001, 10, False, use_numeric_gradient)
+            tuple = do_optimization(start_points, matrix, i, 0.0000001, 10, False, use_numeric_gradient, None)
             if tuple[0] < best_error:
                 best_error = tuple[0]
                 best_points = tuple[1]
@@ -180,20 +180,20 @@ def optimize_with_constant_alfa(start_iteration, end_iteration, step, title, use
     visualize(best_points, title, labels)
 
 
-def optimize_distance_with_optimal_alfa(file_name, title, use_numeric_gradient, labels):
+def optimize_distance_with_optimal_alfa(file_name, title, use_numeric_gradient, labels, alfa_learning_rate):
     elements_separator = ' '
     lines_separator = ';'
     matrix = read_distance_matrix_from_file(file_name, elements_separator, lines_separator)
-    optimize_with_alfa_optimization(title, use_numeric_gradient, labels, matrix)
+    optimize_with_alfa_optimization(title, use_numeric_gradient, labels, matrix, alfa_learning_rate)
 
 
-def optimize_with_alfa_optimization(title, use_numeric_gradient, labels, matrix):
+def optimize_with_alfa_optimization(title, use_numeric_gradient, labels, matrix, alfa_learning_rate):
     best_error = 1000000000
     best_points = []
 
     for j in range(10):
         start_points = get_random_start_points(matrix.shape[0], 0, 0, matrix.max(), matrix.max())
-        tuple = do_optimization(start_points, matrix, 1, 0.0000001, 10, True, use_numeric_gradient)
+        tuple = do_optimization(start_points, matrix, 1, 0.0000001, 10, True, use_numeric_gradient, alfa_learning_rate)
         if tuple[0] < best_error:
             best_error = tuple[0]
             best_points = tuple[1]
@@ -232,7 +232,7 @@ def calculate_numeric_gradient_for_alfa(points: np.array, epsilon: float, true_d
 
 def get_optimal_alfa(points_gradient: np.array, points: np.array, true_distances: np.array,
                      epsilon: float, learning_rate: float, max_steps_without_improvement: float):
-    alfa = rd.uniform(0.000001, 0.09)
+    alfa = rd.uniform(0.000001, 0.8)
 
     new_points = calculate_next_points_vector(points, points_gradient, alfa)
     new_distances = calculate_distance_matrix(new_points)
@@ -275,7 +275,7 @@ def visualize(points: np.array, title, labels):
 
     if labels is not None:
         for i in range(len(points)):
-            plt.plot(points[i,0], points[i,1], 'o', label = labels[i])
+            plt.plot(points[i,0], points[i,1], 'o', label=labels[i])
         plt.legend(loc='best')
 
     else:
@@ -296,21 +296,22 @@ def read_coordinates_matrix_from_file(path, elements_separator, lines_separator)
 def process_embeddings():
     label_coordinates_tuple = read_coordinates_matrix_from_file("Resources/embeddings.txt", ' ', '\n')
     distances = calculate_distance_matrix(label_coordinates_tuple[1])
-    optimize_with_alfa_optimization("ABC", True, label_coordinates_tuple[0], distances)
+    optimize_with_alfa_optimization("ABC", True, label_coordinates_tuple[0], distances, 0.001)
 
 
 def main():
-    #optimize_distance_with_optimal_alfa("Resources/triangle", "Gradient numeryczny - metoda najszybszego spadku", True, None)
-    #optimize_distance("Resources/triangle", 100, 101, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, None)
-    #optimize_distance("Resources/line", 100, 101, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, None)
-    #optimize_distance_with_optimal_alfa("Resources/line", "Gradient numeryczny - metoda najszybszego spadku", True, None)
-    #optimize_distance_with_optimal_alfa("Resources/triangle", "Gradient analityczny - metoda najszybszego spadku", False, None)
-    #optimize_distance("Resources/triangle", 100, 101, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
-    #optimize_distance("Resources/line", 100, 101, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
-    #optimize_distance_with_optimal_alfa("Resources/line", "Gradient analityczny - metoda najszybszego spadku", False, None)
-    #cities = ['Warszawa','Kraków','Łódź','Wrocław','Poznań','Gdańsk','Szczecin','Bydgoszcz','Lublin','Katowice']
-    #optimize_distance("Resources/cities", 2, 3, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, cities)
+    optimize_distance_with_optimal_alfa("Resources/triangle", "Gradient numeryczny - metoda najszybszego spadku", True, None, 0.001)
+    optimize_distance("Resources/triangle", 100, 101, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, None)
+    optimize_distance("Resources/line", 100, 101, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, None)
+    optimize_distance_with_optimal_alfa("Resources/line", "Gradient numeryczny - metoda najszybszego spadku", True, None, 0.001)
+    optimize_distance_with_optimal_alfa("Resources/triangle", "Gradient analityczny - metoda najszybszego spadku", False, None, 0.000001)
+    optimize_distance("Resources/triangle", 80000, 80001, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
+    optimize_distance("Resources/line", 100, 101, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
+    optimize_distance_with_optimal_alfa("Resources/line", "Gradient analityczny - metoda najszybszego spadku", False, None, 0.000001)
+    cities = ['Warszawa','Kraków','Łódź','Wrocław','Poznań','Gdańsk','Szczecin','Bydgoszcz','Lublin','Katowice']
+    optimize_distance("Resources/cities", 2, 3, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, cities)
     process_embeddings()
+
 
 if __name__ == '__main__':
     main()
