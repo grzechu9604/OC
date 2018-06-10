@@ -93,7 +93,7 @@ def get_random_start_points(amount_of_points: int,
                             max_x_coordinate: int, max_y_coordinate: int):
     points = []
     for i in range(amount_of_points):
-        points.append([rd.randint(min_x_coordinate, max_x_coordinate), rd.randint(min_y_coordinate, max_y_coordinate)])
+        points.append([rd.uniform(min_x_coordinate, max_x_coordinate), rd.uniform(min_y_coordinate, max_y_coordinate)])
     return np.array(points)
 
 
@@ -113,7 +113,10 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
     while True:
         previous_error_value = current_error_value
         gradient = calculate_gradient(current_points, true_distances)
-        next_points = calculate_next_points_vector(current_points, gradient, learning_rate)
+
+        numeric_gradient = calculate_gradient_numeric(current_points, 0.0000001, true_distances, current_error_value)
+
+        next_points = calculate_next_points_vector(current_points, numeric_gradient, learning_rate)
         current_error_matrix = calculate_distance_matrix(next_points)
         current_error_value = calculate_distance_error(true_distances, current_error_matrix)
         current_points = next_points
@@ -121,7 +124,7 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
         if current_error_value < previous_error_value:
             best_error = current_error_value
             best_points = current_points
-            steps_without_improvement = 0
+            #steps_without_improvement = 0
         else:
             steps_without_improvement += 1
 
@@ -135,7 +138,7 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
     return [best_error, best_points]
 
 
-def optimize_distance(file_name):
+def optimize_distance(file_name, start_iteration, end_iteration):
     elements_separator = ' '
     lines_separator = ';'
     matrix = read_distance_matrix_from_file(file_name, elements_separator, lines_separator)
@@ -145,10 +148,10 @@ def optimize_distance(file_name):
     best_i = 0
 
     for j in range(100):
-        start_points = get_random_start_points(matrix.shape[0], 0, 0, 10, 5)
-        for i in range(200035504, 200035506):
+        start_points = get_random_start_points(matrix.shape[0], 0, 0, matrix.max(), matrix.max())
+        for i in range(start_iteration, end_iteration):
             print("Start: " + str(i))
-            tuple = do_optimization(start_points, matrix, i, 0.0000001, 5)
+            tuple = do_optimization(start_points, matrix, i, 0.0000001, 10)
             if tuple[0] < best_error:
                 best_error = tuple[0]
                 best_points = tuple[1]
@@ -162,10 +165,28 @@ def optimize_distance(file_name):
     plt.show()
 
 
+def calculate_gradient_element_numeric(points: np.array, epsilon: float, true_distance: np.array,
+                                       i: int, j: int, current_error: float):
+    points[i, j] += epsilon
+    new_distances = calculate_distance_matrix(points)
+    new_error = calculate_distance_error(true_distance, new_distances)
+    return (new_error - current_error) / epsilon
+
+
+def calculate_gradient_numeric(points: np.array, epsilon: float, true_distance: np.array, current_error: float):
+    gradient = np.zeros(points.shape)
+
+    for i in range(gradient.shape[0]):
+        for j in range(gradient.shape[1]):
+            gradient[i, j] = calculate_gradient_element_numeric(points, epsilon, true_distance, i, j, current_error)
+
+    return gradient
+
+
 def main():
-    optimize_distance("Resources/triangle")
-    optimize_distance("Resources/line")
-    optimize_distance("Resources/cities")
+    optimize_distance("Resources/triangle", 1000, 1001)
+    #optimize_distance("Resources/line", 100000, 100002)
+    #optimize_distance("Resources/cities", 20003550605550, 20003550605553)
 
 
 if __name__ == '__main__':
