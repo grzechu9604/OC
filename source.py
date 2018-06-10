@@ -109,8 +109,8 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
 
     learning_rate = get_learning_rate(iteration)
 
-    current_error_matrix = calculate_distance_matrix(start_points)
-    current_error_value = calculate_distance_error(true_distances, current_error_matrix)
+    current_distance_matrix = calculate_distance_matrix(start_points)
+    current_error_value = calculate_distance_error(true_distances, current_distance_matrix)
     current_points = start_points
     steps_without_improvement = 0
 
@@ -129,8 +129,8 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
             learning_rate = get_optimal_alfa(gradient, current_points, true_distances, epsilon, 0.000001, 3)
 
         next_points = calculate_next_points_vector(current_points, gradient, learning_rate)
-        current_error_matrix = calculate_distance_matrix(next_points)
-        current_error_value = calculate_distance_error(true_distances, current_error_matrix)
+        current_distance_matrix = calculate_distance_matrix(next_points)
+        current_error_value = calculate_distance_error(true_distances, current_distance_matrix)
         current_points = next_points
 
         if current_error_value < previous_error_value:
@@ -154,12 +154,16 @@ def optimize_distance(file_name, start_iteration, end_iteration, step, title, us
     elements_separator = ' '
     lines_separator = ';'
     matrix = read_distance_matrix_from_file(file_name, elements_separator, lines_separator)
+    optimize_with_constant_alfa(start_iteration, end_iteration, step, title, use_numeric_gradient, labels,
+                                matrix)
 
+
+def optimize_with_constant_alfa(start_iteration, end_iteration, step, title, use_numeric_gradient, labels, matrix):
     best_error = 1000000000
     best_points = []
     best_i = 0
 
-    for j in range(100):
+    for j in range(10):
         start_points = get_random_start_points(matrix.shape[0], 0, 0, matrix.max(), matrix.max())
         for i in range(start_iteration, end_iteration, step):
             print("Start: " + str(i))
@@ -180,11 +184,14 @@ def optimize_distance_with_optimal_alfa(file_name, title, use_numeric_gradient, 
     elements_separator = ' '
     lines_separator = ';'
     matrix = read_distance_matrix_from_file(file_name, elements_separator, lines_separator)
+    optimize_with_alfa_optimization(title, use_numeric_gradient, labels, matrix)
 
+
+def optimize_with_alfa_optimization(title, use_numeric_gradient, labels, matrix):
     best_error = 1000000000
     best_points = []
 
-    for j in range(100):
+    for j in range(10):
         start_points = get_random_start_points(matrix.shape[0], 0, 0, matrix.max(), matrix.max())
         tuple = do_optimization(start_points, matrix, 1, 0.0000001, 10, True, use_numeric_gradient)
         if tuple[0] < best_error:
@@ -277,6 +284,21 @@ def visualize(points: np.array, title, labels):
     plt.show()
 
 
+def read_coordinates_matrix_from_file(path, elements_separator, lines_separator):
+    file = open(path, 'r')
+    lines = [line.split(lines_separator) for line in file]
+    strings_matrix = [str(line[0]).split(elements_separator) for line in lines]
+    matrix = [[float(element) for element in line[1:301]] for line in strings_matrix]
+    labels = [line[0] for line in strings_matrix]
+    return labels, np.array(matrix)
+
+
+def process_embeddings():
+    label_coordinates_tuple = read_coordinates_matrix_from_file("Resources/embeddings.txt", ' ', '\n')
+    distances = calculate_distance_matrix(label_coordinates_tuple[1])
+    optimize_with_alfa_optimization("ABC", True, label_coordinates_tuple[0], distances)
+
+
 def main():
     #optimize_distance_with_optimal_alfa("Resources/triangle", "Gradient numeryczny - metoda najszybszego spadku", True, None)
     #optimize_distance("Resources/triangle", 100, 101, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, None)
@@ -286,9 +308,9 @@ def main():
     #optimize_distance("Resources/triangle", 100, 101, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
     #optimize_distance("Resources/line", 100, 101, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
     #optimize_distance_with_optimal_alfa("Resources/line", "Gradient analityczny - metoda najszybszego spadku", False, None)
-    cities = ['Warszawa','Kraków','Łódź','Wrocław','Poznań','Gdańsk','Szczecin','Bydgoszcz','Lublin','Katowice']
-    optimize_distance("Resources/cities", 2, 3, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, cities)
-
+    #cities = ['Warszawa','Kraków','Łódź','Wrocław','Poznań','Gdańsk','Szczecin','Bydgoszcz','Lublin','Katowice']
+    #optimize_distance("Resources/cities", 2, 3, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, cities)
+    process_embeddings()
 
 if __name__ == '__main__':
     main()
