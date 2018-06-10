@@ -105,7 +105,7 @@ def get_random_start_points(amount_of_points: int,
 
 
 def do_optimization(start_points: np.array, true_distances: np.array, iteration: int, epsilon: float,
-                    max_steps_without_improvement: int, optimize_alpha: bool):
+                    max_steps_without_improvement: int, optimize_alpha: bool, use_numeric_gradient: bool):
 
     learning_rate = get_learning_rate(iteration)
 
@@ -119,14 +119,16 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
 
     while True:
         previous_error_value = current_error_value
-        gradient = calculate_gradient(current_points, true_distances)
-
-        numeric_gradient = calculate_gradient_numeric(current_points, 0.000000000001, true_distances, current_error_value)
+        if use_numeric_gradient:
+            gradient = calculate_gradient_numeric(current_points, 0.000000000001, true_distances,
+                                                          current_error_value)
+        else:
+            gradient = calculate_gradient(current_points, true_distances)
 
         if optimize_alpha:
-            learning_rate = get_optimal_alfa(numeric_gradient, current_points, true_distances, epsilon, 0.000001, 3)
+            learning_rate = get_optimal_alfa(gradient, current_points, true_distances, epsilon, 0.000001, 3)
 
-        next_points = calculate_next_points_vector(current_points, numeric_gradient, learning_rate)
+        next_points = calculate_next_points_vector(current_points, gradient, learning_rate)
         current_error_matrix = calculate_distance_matrix(next_points)
         current_error_value = calculate_distance_error(true_distances, current_error_matrix)
         current_points = next_points
@@ -148,7 +150,7 @@ def do_optimization(start_points: np.array, true_distances: np.array, iteration:
     return [best_error, best_points]
 
 
-def optimize_distance(file_name, start_iteration, end_iteration, step):
+def optimize_distance(file_name, start_iteration, end_iteration, step, title, use_numeric_gradient, labels):
     elements_separator = ' '
     lines_separator = ';'
     matrix = read_distance_matrix_from_file(file_name, elements_separator, lines_separator)
@@ -161,7 +163,7 @@ def optimize_distance(file_name, start_iteration, end_iteration, step):
         start_points = get_random_start_points(matrix.shape[0], 0, 0, matrix.max(), matrix.max())
         for i in range(start_iteration, end_iteration, step):
             print("Start: " + str(i))
-            tuple = do_optimization(start_points, matrix, i, 0.0000001, 10, False)
+            tuple = do_optimization(start_points, matrix, i, 0.0000001, 10, False, use_numeric_gradient)
             if tuple[0] < best_error:
                 best_error = tuple[0]
                 best_points = tuple[1]
@@ -171,11 +173,10 @@ def optimize_distance(file_name, start_iteration, end_iteration, step):
     print(best_points)
     print(best_i)
 
-    plt.plot(best_points.T[0], best_points.T[1], 'ro')
-    plt.show()
+    visualize(best_points, title, labels)
 
 
-def optimize_distance_with_optimal_alfa(file_name):
+def optimize_distance_with_optimal_alfa(file_name, title, use_numeric_gradient, labels):
     elements_separator = ' '
     lines_separator = ';'
     matrix = read_distance_matrix_from_file(file_name, elements_separator, lines_separator)
@@ -185,7 +186,7 @@ def optimize_distance_with_optimal_alfa(file_name):
 
     for j in range(100):
         start_points = get_random_start_points(matrix.shape[0], 0, 0, matrix.max(), matrix.max())
-        tuple = do_optimization(start_points, matrix, 1, 0.0000001, 10, True)
+        tuple = do_optimization(start_points, matrix, 1, 0.0000001, 10, True, use_numeric_gradient)
         if tuple[0] < best_error:
             best_error = tuple[0]
             best_points = tuple[1]
@@ -193,8 +194,7 @@ def optimize_distance_with_optimal_alfa(file_name):
     print(best_error)
     print(best_points)
 
-    plt.plot(best_points.T[0], best_points.T[1], 'ro')
-    plt.show()
+    visualize(best_points, title, labels)
 
 
 def calculate_gradient_element_numeric(points: np.array, epsilon: float, true_distance: np.array,
@@ -235,9 +235,11 @@ def get_optimal_alfa(points_gradient: np.array, points: np.array, true_distances
     best_error = value
     best_alfa = alfa
     steps_without_improvement = 0
+    max_deepth = 100
 
     while True:
-        alfa_gradient = calculate_numeric_gradient_for_alfa(points, epsilon, true_distances, value, points_gradient,
+        max_deepth -= 1
+        alfa_gradient = calculate_numeric_gradient_for_alfa(points, 0.001, true_distances, value, points_gradient,
                                                             alfa)
         new_alfa = alfa - learning_rate * alfa_gradient
         new_points = calculate_next_points_vector(points, points_gradient, new_alfa)
@@ -253,18 +255,39 @@ def get_optimal_alfa(points_gradient: np.array, points: np.array, true_distances
             best_alfa = new_alfa
         else:
             steps_without_improvement += 1
-        if is_last_iteration(value, new_value, 0.001) or steps_without_improvement > max_steps_without_improvement:
+        if max_deepth == 0 or is_last_iteration(value, new_value, 0.0001) or steps_without_improvement > max_steps_without_improvement:
             break
+
+        value = new_value
 
     print("BEST ALFA: " + str(best_alfa))
     return best_alfa
 
 
+def visualize(points: np.array, title, labels):
+
+    if labels is not None:
+        for i in range(len(points)):
+            plt.plot(points[i,0], points[i,1], 'o', label = labels[i])
+        plt.legend(loc='best')
+
+    else:
+        plt.title(title)
+        plt.plot(points.T[0], points.T[1], 'ro')
+    plt.show()
+
+
 def main():
-    optimize_distance_with_optimal_alfa("Resources/triangle")
-    optimize_distance("Resources/triangle", 100, 101, 1)
-    #optimize_distance("Resources/line", 100, 101, 1)
-    #optimize_distance("Resources/cities", 2, 3)
+    #optimize_distance_with_optimal_alfa("Resources/triangle", "Gradient numeryczny - metoda najszybszego spadku", True, None)
+    #optimize_distance("Resources/triangle", 100, 101, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, None)
+    #optimize_distance("Resources/line", 100, 101, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, None)
+    #optimize_distance_with_optimal_alfa("Resources/line", "Gradient numeryczny - metoda najszybszego spadku", True, None)
+    #optimize_distance_with_optimal_alfa("Resources/triangle", "Gradient analityczny - metoda najszybszego spadku", False, None)
+    #optimize_distance("Resources/triangle", 100, 101, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
+    #optimize_distance("Resources/line", 100, 101, 1, "Gradient analityczny - metoda spadku wzdłuż gradientu", False, None)
+    #optimize_distance_with_optimal_alfa("Resources/line", "Gradient analityczny - metoda najszybszego spadku", False, None)
+    cities = ['Warszawa','Kraków','Łódź','Wrocław','Poznań','Gdańsk','Szczecin','Bydgoszcz','Lublin','Katowice']
+    optimize_distance("Resources/cities", 2, 3, 1, "Gradient numeryczny - metoda spadku wzdłuż gradientu", True, cities)
 
 
 if __name__ == '__main__':
